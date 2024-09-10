@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2048 Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #faf8ef;
+            margin: 0;
+            padding: 0;
+        }
+        #score-container {
+            margin-top: 20px;
+            font-size: 24px;
+            color: #776e65;
+            font-weight: bold;
+        }
+        #score, #best-score {
+            display: block;
+        }
+        #game-container {
+            width: 90vw;
+            max-width: 400px;
+            height: 90vw;
+            max-height: 400px;
+            background-color: #bbada0;
+            border-radius: 10px;
+            margin: 20px auto;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .tile {
+            width: 100%;
+            height: 100%;
+            background-color: #cdc1b4;
+            font-size: 24px;
+            color: #776e65;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .tile[data-value="2"] { background-color: #eee4da; }
+        .tile[data-value="4"] { background-color: #ede0c8; }
+        .tile[data-value="8"] { background-color: #f2b179; color: white; }
+        .tile[data-value="16"] { background-color: #f59563; color: white; }
+        .tile[data-value="32"] { background-color: #f67c5f; color: white; }
+        .tile[data-value="64"] { background-color: #f65e3b; color: white; }
+        .tile[data-value="128"] { background-color: #edcf72; color: white; }
+        .tile[data-value="256"] { background-color: #edcc61; color: white; }
+        .tile[data-value="512"] { background-color: #edc850; color: white; }
+        .tile[data-value="1024"] { background-color: #edc53f; color: white; }
+        .tile[data-value="2048"] { background-color: #edc22e; color: white; }
+        .tile[data-value="4096"] { background-color: #f9d6b9; color: white; }
+        .tile[data-value="8192"] { background-color: #f8b83c; color: white; }
+        .tile[data-value="16384"] { background-color: #f79c42; color: white; }
+        .tile[data-value="32768"] { background-color: #f57c3f; color: white; }
+        .tile[data-value="65536"] { background-color: #f53c5f; color: white; }
+        .tile[data-value="131072"] { background-color: #f35f6d; color: white; }
+        .tile[data-value="262144"] { background-color: #e63946; color: white; }
+        .tile[data-value="524288"] { background-color: #c7165c; color: white; }
+        .tile.empty { background-color: #cdc1b4; }
+
+        #status {
+            margin-top: 20px;
+            font-size: 20px;
+            color: #776e65;
+            font-weight: bold;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #8f7a66;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        button:hover {
+            background-color: #776e65;
+            transform: scale(1.05);
+        }
+        @media (max-width: 600px) {
+            #game-container {
+                width: 95vw;
+                height: 95vw;
+            }
+            .tile {
+                font-size: 18px;
+            }
+            #score-container {
+                font-size: 20px;
+            }
+        }
+        h1 {
+            font-size: 4em;
+            background: linear-gradient(45deg, #ff007f, #ff7f00, #7fff00, #00ff7f, #00ffff, #7f00ff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.3);
+            margin: 20px 0;
+        }
+        .logo {
+            width: 200px;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>2048 Game</h1>
+    <div id="score-container">
+        <div id="score">Score: 0</div>
+        <div id="best-score">Highest Score: 0</div>
+    </div>
+    <div id="game-container"></div>
+    <div id="status">Swipe or use arrow keys to play!</div>
+    <button onclick="restartGame()">Restart Game</button>
+
+    <script>
+        const grid = [];
+        const size = 5; // Changed from 6 to 4 for the 2048 game
+        let score = 0;
+        let bestScore = localStorage.getItem('bestScore') || 0;
+        
+        function createGrid() {
+            const container = document.getElementById('game-container');
+            container.innerHTML = '';
+            for (let i = 0; i < size * size; i++) {
+                const tile = document.createElement('div');
+                tile.classList.add('tile', 'empty');
+                tile.dataset.index = i;
+                container.appendChild(tile);
+                grid.push(null);
+            }
+        }
+
+        function generateTile() {
+            const emptyTiles = grid.map((value, index) => value === null ? index : null).filter(x => x !== null);
+            if (emptyTiles.length === 0) return; // No more empty tiles
+            const randomIndex = emptyTiles[Math.floor(Math.random() * emptyTiles.length)];
+            grid[randomIndex] = Math.random() > 0.1 ? 2 : 4;
+            updateGrid();
+        }
+
+        function updateGrid() {
+            const tiles = document.querySelectorAll('.tile');
+            tiles.forEach((tile, index) => {
+                const value = grid[index];
+                if (value) {
+                    tile.classList.remove('empty');
+                    tile.textContent = value;
+                    tile.dataset.value = value;
+                } else {
+                    tile.classList.add('empty');
+                    tile.textContent = '';
+                    tile.dataset.value = '';
+                }
+            });
+        }
+
+        function slideRow(row) {
+            const filteredRow = row.filter(tile => tile !== null);
+            const missingTiles = Array(size - filteredRow.length).fill(null);
+            return filteredRow.concat(missingTiles);
+        }
+
+        function combineRow(row) {
+            for (let i = 0; i < row.length - 1; i++) {
+                if (row[i] !== null && row[i] === row[i + 1]) {
+                    row[i] *= 2;
+                    score += row[i];
+                    row[i + 1] = null;
+                }
+            }
+            return row;
+        }
+
+        function moveLeft() {
+            for (let i = 0; i < size; i++) {
+                let row = grid.slice(i * size, i * size + size);
+                row = slideRow(row);
+                row = combineRow(row);
+                row = slideRow(row);
+                for (let j = 0; j < size; j++) {
+                    grid[i * size + j] = row[j];
+                }
+            }
+            generateTile();
+            updateScore();
+            checkBestScore();
+        }
+
+        function moveRight() {
+            for (let i = 0; i < size; i++) {
+                let row = grid.slice(i * size, i * size + size).reverse();
+                row = slideRow(row);
+                row = combineRow(row);
+                row = slideRow(row);
+                row.reverse();
+                for (let j = 0; j < size; j++) {
+                    grid[i * size + j] = row[j];
+                }
+            }
+            generateTile();
+            updateScore();
+            checkBestScore();
+        }
+
+        function moveUp() {
+            for (let i = 0; i < size; i++) {
+                let row = [];
+                for (let j = 0; j < size; j++) {
+                    row.push(grid[j * size + i]);
+                }
+                row = slideRow(row);
+                row = combineRow(row);
+                row = slideRow(row);
+                for (let j = 0; j < size; j++) {
+                    grid[j * size + i] = row[j];
+                }
+            }
+            generateTile();
+            updateScore();
+            checkBestScore();
+        }
+
+        function moveDown() {
+            for (let i = 0; i < size; i++) {
+                let row = [];
+                for (let j = 0; j < size; j++) {
+                    row.push(grid[j * size + i]);
+                }
+                row.reverse();
+                row = slideRow(row);
+                row = combineRow(row);
+                row = slideRow(row);
+                row.reverse();
+                for (let j = 0; j < size; j++) {
+                    grid[j * size + i] = row[j];
+                }
+            }
+            generateTile();
+            updateScore();
+            checkBestScore();
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = `Score: ${score}`;
+        }
+
+        function checkBestScore() {
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('bestScore', bestScore);
+                document.getElementById('best-score').textContent = `Best Score: ${bestScore}`;
+            }
+        }
+
+        function restartGame() {
+            grid.length = 0;
+            score = 0;
+            createGrid();
+            generateTile();
+            generateTile();
+            updateScore();
+        }
+
+        function handleKey(event) {
+            switch (event.key) {
+                case 'ArrowLeft':
+                    moveLeft();
+                    break;
+                case 'ArrowRight':
+                    moveRight();
+                    break;
+                case 'ArrowUp':
+                    moveUp();
+                    break;
+                case 'ArrowDown':
+                    moveDown();
+                    break;
+            }
+        }
+
+        function handleSwipe(event) {
+            // Swipe detection logic for mobile
+            const xStart = event.touches[0].clientX;
+            const yStart = event.touches[0].clientY;
+            document.addEventListener('touchend', function (event) {
+                const xEnd = event.changedTouches[0].clientX;
+                const yEnd = event.changedTouches[0].clientY;
+                const xDiff = xEnd - xStart;
+                const yDiff = yEnd - yStart;
+                if (Math.abs(xDiff) > Math.abs(yDiff)) {
+                    if (xDiff > 0) {
+                        moveRight();
+                    } else {
+                        moveLeft();
+                    }
+                } else {
+                    if (yDiff > 0) {
+                        moveDown();
+                    } else {
+                        moveUp();
+                    }
+                }
+            }, { once: true });
+        }
+
+        createGrid();
+        generateTile();
+        generateTile();
+        updateScore();
+
+        document.addEventListener('keydown', handleKey);
+        document.addEventListener('touchstart', handleSwipe);
+    </script>
+</body>
+</html>
